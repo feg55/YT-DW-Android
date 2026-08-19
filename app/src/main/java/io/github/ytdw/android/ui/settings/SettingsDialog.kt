@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import io.github.ytdw.android.BuildConfig
 import io.github.ytdw.android.domain.model.AppSettings
 import io.github.ytdw.android.domain.model.LanguagePreference
 import io.github.ytdw.android.domain.model.MetadataSettings
@@ -149,6 +150,17 @@ fun SettingsDialog(
                 SettingSwitch(strings.skipArchive, settings.skipDownloadArchive) {
                     onChange(settings.copy(skipDownloadArchive = it))
                 }
+                Text(
+                    text = if (russian) {
+                        "YT-DW ${BuildConfig.VERSION_NAME} · GPL-3.0-only\n" +
+                            "Свободное ПО без гарантий. Лицензии находятся в assets/legal."
+                    } else {
+                        "YT-DW ${BuildConfig.VERSION_NAME} · GPL-3.0-only\n" +
+                            "Free software without warranty. Licenses are in assets/legal."
+                    },
+                    modifier = Modifier.padding(top = 16.dp),
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                )
             }
         },
         confirmButton = { TextButton(onClose) { Text(strings.close) } },

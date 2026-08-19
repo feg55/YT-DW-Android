@@ -1,6 +1,35 @@
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileSystemOperations
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import java.net.URI
 import java.security.MessageDigest
 import java.util.Properties
+import javax.inject.Inject
+
+abstract class PackageLegalNotices @Inject constructor(
+    private val fileSystemOperations: FileSystemOperations,
+) : DefaultTask() {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val legalFiles: ConfigurableFileCollection
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun packageFiles() {
+        fileSystemOperations.sync {
+            from(legalFiles)
+            into(outputDirectory.get().dir("legal"))
+        }
+    }
+}
 
 plugins {
     id("com.android.application")
@@ -12,12 +41,21 @@ val ytDlpVersion = "2026.07.04"
 val ytDlpSha256 = "495be29ff4d9d4e9be7eabdfef225221e5d5282e77f2f505abc6dca80349f3fd"
 val generatedYtDlpResources = layout.buildDirectory.dir("generated/ytDlpResources")
 val bundledYtDlp = generatedYtDlpResources.map { it.file("raw/ytdlp") }
+val generatedLegalAssets = layout.buildDirectory.dir("generated/legalAssets")
 val releaseSigningFile = rootProject.file("keystore.properties")
 val releaseSigning = Properties().apply {
     if (releaseSigningFile.isFile) releaseSigningFile.inputStream().use(::load)
 }
 val hasReleaseSigning = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
     .all { !releaseSigning.getProperty(it).isNullOrBlank() }
+val releaseArtifactRequested = gradle.startParameter.taskNames.any {
+    it.substringAfterLast(':').lowercase() in setOf("assemblerelease", "bundlerelease")
+}
+
+check(hasReleaseSigning || !releaseArtifactRequested) {
+    "Release signing is not configured. Copy keystore.properties.example to " +
+        "keystore.properties and provide a persistent release keystore."
+}
 
 fun sha256(file: File): String = MessageDigest.getInstance("SHA-256")
     .digest(file.readBytes())
@@ -41,6 +79,15 @@ val downloadYtDlp = tasks.register("downloadYtDlp") {
         temporary.copyTo(output, overwrite = true)
         temporary.delete()
     }
+}
+
+val packageLegalNotices = tasks.register<PackageLegalNotices>("packageLegalNotices") {
+    legalFiles.from(
+        rootProject.file("LICENSE"),
+        rootProject.file("NOTICE"),
+        rootProject.file("THIRD_PARTY_NOTICES.md"),
+    )
+    outputDirectory.set(generatedLegalAssets)
 }
 
 android {
@@ -74,8 +121,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Local release builds stay installable; publication builds use keystore.properties.
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            signingConfigs.findByName("release")?.let { signingConfig = it }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -110,6 +156,14 @@ java {
 }
 
 tasks.named("preBuild").configure { dependsOn(downloadYtDlp) }
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(packageLegalNotices) {
+            it.outputDirectory
+        }
+    }
+}
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
