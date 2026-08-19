@@ -92,12 +92,12 @@ val packageLegalNotices = tasks.register<PackageLegalNotices>("packageLegalNotic
 
 android {
     namespace = "io.github.ytdw.android"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "io.github.ytdw.android"
         minSdk = 29
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 4
         versionName = "0.1.3"
         buildConfigField("String", "YT_DLP_VERSION", "\"$ytDlpVersion\"")

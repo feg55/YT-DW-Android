@@ -18,7 +18,7 @@
 
 ## Сборка
 
-Требуются JDK 17 и Android SDK с платформой API 37. Gradle Wrapper загружает закреплённую версию `yt-dlp` и проверяет её SHA-256.
+Требуются JDK 17 и Android SDK с платформой API 36. Gradle Wrapper загружает закреплённую версию `yt-dlp` и проверяет её SHA-256.
 
 Windows:
 
