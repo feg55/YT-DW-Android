@@ -63,4 +63,31 @@ class MigrationInstrumentedTest {
         helper.close()
         context.deleteDatabase(name)
     }
+
+    @Test fun migrationAddsDownloadConcurrencySettings() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val name = "migration-concurrency-test.sqlite3"
+        context.deleteDatabase(name)
+        val config = SupportSQLiteOpenHelper.Configuration.builder(context)
+            .name(name)
+            .callback(object : SupportSQLiteOpenHelper.Callback(3) {
+                override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                    db.execSQL("CREATE TABLE app_settings (id INTEGER NOT NULL PRIMARY KEY)")
+                }
+                override fun onUpgrade(db: androidx.sqlite.db.SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+            }).build()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(config)
+        val db = helper.writableDatabase
+        AppDatabase.MIGRATION_3_4.migrate(db)
+        db.execSQL("INSERT INTO app_settings (id) VALUES (1)")
+        val values = db.query(
+            "SELECT parallelDownloads, concurrentFragmentDownloads FROM app_settings",
+        ).use { cursor ->
+            check(cursor.moveToFirst())
+            listOf(cursor.getInt(0), cursor.getInt(1))
+        }
+        assertTrue(values == listOf(2, 4))
+        helper.close()
+        context.deleteDatabase(name)
+    }
 }

@@ -29,6 +29,8 @@ data class AppSettings(
     val fragmentRetryCount: Int = 5,
     val continuePartialDownloads: Boolean = true,
     val socketTimeoutSeconds: Int = 30,
+    val parallelDownloads: Int = 2,
+    val concurrentFragmentDownloads: Int = 4,
     val audioVolumeName: String = "external_primary",
     val audioRelativePath: String = "Music/YT-DW",
     val videoVolumeName: String = "external_primary",

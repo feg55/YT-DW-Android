@@ -58,8 +58,61 @@ interface AppDao {
     @Query("UPDATE queue_items SET status = 'READY', currentPhase = '', speed = NULL, etaSeconds = NULL, updatedAt = :now WHERE status IN ('DOWNLOADING', 'PROCESSING')")
     suspend fun restoreDownloads(now: Long): Int
 
+    @Query(
+        """UPDATE queue_items SET
+            progressPercentage = :percentage,
+            downloadedBytes = :downloadedBytes,
+            totalBytes = :totalBytes,
+            speed = :speed,
+            etaSeconds = :etaSeconds,
+            currentPhase = :phase,
+            updatedAt = :now
+            WHERE id = :id AND status = 'DOWNLOADING'""",
+    )
+    suspend fun updateProgress(
+        id: String,
+        percentage: Double,
+        downloadedBytes: Long,
+        totalBytes: Long?,
+        speed: Double?,
+        etaSeconds: Long?,
+        phase: String,
+        now: Long,
+    ): Int
+
     @Query("UPDATE queue_items SET status = 'PENDING', currentPhase = '', speed = NULL, etaSeconds = NULL, updatedAt = :now WHERE status = 'ANALYZING'")
     suspend fun restoreAnalysis(now: Long): Int
+
+    @Query("UPDATE queue_items SET selected = :selected, updatedAt = :now WHERE id = :id")
+    suspend fun updateSelection(id: String, selected: Boolean, now: Long): Int
+
+    @Query(
+        """UPDATE queue_items SET
+            cleanedTitle = :cleanedTitle,
+            artist = :artist,
+            albumArtist = :albumArtist,
+            album = :album,
+            trackNumber = :trackNumber,
+            titleManuallyEdited = :titleManuallyEdited,
+            artistManuallyEdited = :artistManuallyEdited,
+            albumManuallyEdited = :albumManuallyEdited,
+            trackManuallyEdited = :trackManuallyEdited,
+            updatedAt = :now
+            WHERE id = :id""",
+    )
+    suspend fun updateMetadata(
+        id: String,
+        cleanedTitle: String,
+        artist: String,
+        albumArtist: String,
+        album: String,
+        trackNumber: Int?,
+        titleManuallyEdited: Boolean,
+        artistManuallyEdited: Boolean,
+        albumManuallyEdited: Boolean,
+        trackManuallyEdited: Boolean,
+        now: Long,
+    ): Int
 
     @Insert
     suspend fun insertHistory(item: HistoryEntity): Long

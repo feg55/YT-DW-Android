@@ -10,8 +10,10 @@ import io.github.ytdw.android.download.engine.ThumbnailProcessor
 import io.github.ytdw.android.download.engine.YtDlpDownloadEngine
 import io.github.ytdw.android.util.ErrorLogger
 import io.github.ytdw.android.util.MediaStorePublisher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 
 class YtdwApplication : Application() {
     lateinit var container: AppContainer
@@ -20,13 +22,11 @@ class YtdwApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
-        runBlocking(Dispatchers.IO) {
-            container.queueRepository.restoreUnfinished()
-        }
     }
 }
 
 class AppContainer(application: Application) {
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val database = AppDatabase.create(application)
     val queueRepository = QueueRepository(database)
     val settingsRepository = SettingsRepository(database.dao())
@@ -35,6 +35,13 @@ class AppContainer(application: Application) {
     val metadataService = FfmpegMetadataService(application)
     val mediaStorePublisher = MediaStorePublisher(application)
     val errorLogger = ErrorLogger(database.dao(), application.filesDir.resolve("logs"))
+    private val initialization = applicationScope.async {
+        queueRepository.restoreUnfinished()
+    }
+
+    suspend fun awaitReady() {
+        initialization.await()
+    }
 }
 
 val android.content.Context.appContainer: AppContainer

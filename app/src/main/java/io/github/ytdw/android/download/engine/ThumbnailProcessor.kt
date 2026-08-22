@@ -39,41 +39,56 @@ class ThumbnailProcessor(private val cacheDir: File) {
                         }
                     }
                 }
-                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                BitmapFactory.decodeFile(raw.absolutePath, bounds)
-                require(bounds.outWidth > 0 && bounds.outHeight > 0) { "Unsupported thumbnail image" }
-                var sample = 1
-                while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 2800) sample *= 2
-                val decoded = BitmapFactory.decodeFile(
-                    raw.absolutePath, BitmapFactory.Options().apply { inSampleSize = sample },
-                ) ?: error("Unsupported thumbnail image")
-                val rotation = when (ExifInterface(raw).getAttributeInt(
-                    ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL,
-                )) {
-                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-                    else -> 0f
-                }
-                val source = if (rotation != 0f) Bitmap.createBitmap(
-                    decoded, 0, 0, decoded.width, decoded.height, Matrix().apply { postRotate(rotation) }, true,
-                ) else decoded
-                val cropped = if (cropSquare) {
-                    val side = minOf(source.width, source.height)
-                    Bitmap.createBitmap(source, (source.width - side) / 2, (source.height - side) / 2, side, side)
-                } else source
-                val boundedSide = maxOf(cropped.width, cropped.height).coerceIn(600, 1400)
-                val scale = boundedSide.toDouble() / maxOf(cropped.width, cropped.height)
-                val target = if (scale != 1.0) cropped.scale(
-                    (cropped.width * scale).toInt(),
-                    (cropped.height * scale).toInt(),
-                ) else cropped
-                FileOutputStream(result).use { check(target.compress(Bitmap.CompressFormat.JPEG, 90, it)) }
-                listOf(target, cropped, source, decoded).distinctBy(System::identityHashCode).forEach(Bitmap::recycle)
-                result
+                processImage(raw, result, cropSquare)
             } finally {
                 connection.disconnect()
                 raw.delete()
             }
         }
+
+    suspend fun process(source: File, key: String, cropSquare: Boolean): File = withContext(Dispatchers.IO) {
+        require(source.isFile) { "Cached thumbnail is unavailable" }
+        val result = File(cacheDir, "covers/$key.jpg")
+        check(result.parentFile?.mkdirs() == true || result.parentFile?.isDirectory == true)
+        if (source.absolutePath == result.absolutePath && !cropSquare) result
+        else processImage(source, result, cropSquare)
+    }
+
+    private fun processImage(input: File, result: File, cropSquare: Boolean): File {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(input.absolutePath, bounds)
+        require(bounds.outWidth > 0 && bounds.outHeight > 0) { "Unsupported thumbnail image" }
+        var sample = 1
+        while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 2800) sample *= 2
+        val decoded = BitmapFactory.decodeFile(
+            input.absolutePath, BitmapFactory.Options().apply { inSampleSize = sample },
+        ) ?: error("Unsupported thumbnail image")
+        val rotation = when (ExifInterface(input).getAttributeInt(
+            ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL,
+        )) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+            ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+            ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+            else -> 0f
+        }
+        val source = if (rotation != 0f) Bitmap.createBitmap(
+            decoded, 0, 0, decoded.width, decoded.height, Matrix().apply { postRotate(rotation) }, true,
+        ) else decoded
+        val cropped = if (cropSquare) {
+            val side = minOf(source.width, source.height)
+            Bitmap.createBitmap(source, (source.width - side) / 2, (source.height - side) / 2, side, side)
+        } else source
+        val boundedSide = maxOf(cropped.width, cropped.height).coerceAtMost(1400)
+        val scale = boundedSide.toDouble() / maxOf(cropped.width, cropped.height)
+        val target = if (scale < 1.0) cropped.scale(
+            (cropped.width * scale).toInt(),
+            (cropped.height * scale).toInt(),
+        ) else cropped
+        try {
+            FileOutputStream(result).use { check(target.compress(Bitmap.CompressFormat.JPEG, 90, it)) }
+            return result
+        } finally {
+            listOf(target, cropped, source, decoded).distinctBy(System::identityHashCode).forEach(Bitmap::recycle)
+        }
+    }
 }

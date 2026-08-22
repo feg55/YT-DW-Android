@@ -21,7 +21,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.ytdw.android.domain.model.DownloadItem
 import io.github.ytdw.android.domain.model.DownloadStatus
 import io.github.ytdw.android.ui.AppViewModel
@@ -36,10 +36,10 @@ import io.github.ytdw.android.ui.UiStrings
 
 @Composable
 fun DownloadsScreen(viewModel: AppViewModel, strings: UiStrings) {
-    val queue by viewModel.queue.collectAsState()
-    val history by viewModel.history.collectAsState()
-    val settings by viewModel.settings.collectAsState()
-    val queueError by viewModel.queueError.collectAsState()
+    val queue by viewModel.queue.collectAsStateWithLifecycle()
+    val history by viewModel.history.collectAsStateWithLifecycle()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val queueError by viewModel.queueError.collectAsStateWithLifecycle()
     val confirm = remember { mutableStateOf(false) }
     val context = LocalContext.current
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {

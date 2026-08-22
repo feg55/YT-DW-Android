@@ -86,7 +86,9 @@ class MediaStorePublisher(private val context: Context) {
         }
         val uri = resolver.insert(collection, values) ?: error("MediaStore rejected the output file")
         try {
-            resolver.openOutputStream(uri, "w")?.use { output -> file.inputStream().use { it.copyTo(output) } }
+            resolver.openOutputStream(uri, "w")?.use { output ->
+                file.inputStream().use { it.copyTo(output, bufferSize = COPY_BUFFER_SIZE) }
+            }
                 ?: error("MediaStore output stream is unavailable")
             check(
                 resolver.update(
@@ -101,5 +103,9 @@ class MediaStorePublisher(private val context: Context) {
             resolver.delete(uri, null, null)
             throw error
         }
+    }
+
+    private companion object {
+        const val COPY_BUFFER_SIZE = 256 * 1024
     }
 }

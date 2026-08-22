@@ -150,6 +150,28 @@ fun SettingsDialog(
                 SettingSwitch(strings.skipArchive, settings.skipDownloadArchive) {
                     onChange(settings.copy(skipDownloadArchive = it))
                 }
+                Text(if (russian) "Одновременные загрузки" else "Parallel downloads")
+                FlowRow {
+                    listOf(1, 2, 3).forEach { count ->
+                        FilterChip(
+                            selected = settings.parallelDownloads == count,
+                            onClick = { onChange(settings.copy(parallelDownloads = count)) },
+                            label = { Text(count.toString()) },
+                            modifier = Modifier.padding(end = 4.dp),
+                        )
+                    }
+                }
+                Text(if (russian) "Параллельные фрагменты на загрузку" else "Concurrent fragments per download")
+                FlowRow {
+                    listOf(1, 2, 4, 6, 8).forEach { count ->
+                        FilterChip(
+                            selected = settings.concurrentFragmentDownloads == count,
+                            onClick = { onChange(settings.copy(concurrentFragmentDownloads = count)) },
+                            label = { Text(count.toString()) },
+                            modifier = Modifier.padding(end = 4.dp),
+                        )
+                    }
+                }
                 Text(
                     text = if (russian) {
                         "YT-DW ${BuildConfig.VERSION_NAME} · GPL-3.0-only\n" +

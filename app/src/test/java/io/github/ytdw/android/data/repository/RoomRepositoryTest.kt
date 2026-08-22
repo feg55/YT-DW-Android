@@ -6,9 +6,13 @@ import androidx.test.core.app.ApplicationProvider
 import io.github.ytdw.android.data.database.AppDatabase
 import io.github.ytdw.android.domain.model.AppSettings
 import io.github.ytdw.android.domain.model.DownloadItem
+import io.github.ytdw.android.domain.model.DownloadProgress
 import io.github.ytdw.android.domain.model.DownloadStatus
 import io.github.ytdw.android.domain.model.LanguagePreference
 import io.github.ytdw.android.domain.model.ThemePreference
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -69,6 +73,48 @@ class RoomRepositoryTest {
         assertEquals(DownloadStatus.READY, queue.get(item.id)?.status)
     }
 
+    @Test fun partialUpdatesPreserveStateAndProgressCannotResurrectCancelledItem() = runTest {
+        val item = queue.add(
+            DownloadItem(
+                sourceUrl = "https://example.test/partial",
+                videoId = "partial",
+                originalTitle = "Original",
+                cleanedTitle = "Original",
+                cachedThumbnailPath = "/cache/cover.jpg",
+                status = DownloadStatus.READY,
+            ),
+            false,
+        )
+        assertEquals(item.id, queue.claimNext(false)?.id)
+        queue.progress(
+            item.id,
+            DownloadProgress(
+                percentage = 42.0,
+                downloadedBytes = 420,
+                totalBytes = 1_000,
+                speedBytesPerSecond = 100.0,
+                etaSeconds = 6,
+                phase = "Downloading",
+            ),
+        )
+        val active = requireNotNull(queue.get(item.id))
+        assertTrue(queue.updateMetadata(active.copy(cleanedTitle = "Edited", titleManuallyEdited = true)))
+        assertTrue(queue.updateSelection(item.id, false))
+        val edited = requireNotNull(queue.get(item.id))
+        assertEquals(DownloadStatus.DOWNLOADING, edited.status)
+        assertEquals(42.0, edited.progressPercentage, 0.0)
+        assertEquals("/cache/cover.jpg", edited.cachedThumbnailPath)
+        assertEquals("Edited", edited.cleanedTitle)
+        assertFalse(edited.selected)
+
+        queue.cancel(item.id)
+        queue.progress(item.id, DownloadProgress(99.0, phase = "Late callback"))
+        val cancelled = requireNotNull(queue.get(item.id))
+        assertEquals(DownloadStatus.CANCELLED, cancelled.status)
+        assertEquals(42.0, cancelled.progressPercentage, 0.0)
+        assertEquals("Cancelled", cancelled.currentPhase)
+    }
+
     @Test fun completionCreatesHistoryAndArchiveThenDuplicateIsSkipped() = runTest {
         val item = queue.add(DownloadItem(sourceUrl = "https://example.test/a", videoId = "archive", originalTitle = "A", cleanedTitle = "A", artist = "Artist", status = DownloadStatus.READY), false)
         assertNotNull(queue.complete(item.id, "content://media/a", "A.m4a"))
@@ -79,12 +125,45 @@ class RoomRepositoryTest {
         assertTrue(cleared.second >= 2)
     }
 
+    @Test fun batchInsertPreservesOrderAndDeduplicatesVideoIds() = runTest {
+        val stored = queue.addAll(
+            listOf(
+                DownloadItem(sourceUrl = "https://example.test/1", videoId = "batch-1", status = DownloadStatus.READY),
+                DownloadItem(sourceUrl = "https://example.test/2", videoId = "batch-2", status = DownloadStatus.READY),
+                DownloadItem(sourceUrl = "https://example.test/1-copy", videoId = "batch-1", status = DownloadStatus.READY),
+            ),
+            false,
+        )
+        assertEquals(3, stored.size)
+        assertEquals(stored[0].id, stored[2].id)
+        assertEquals(listOf("batch-1", "batch-2"), database.dao().listQueue().map { it.videoId })
+    }
+
+    @Test fun concurrentClaimsNeverReturnTheSameQueueItem() = runTest {
+        queue.addAll(
+            (1..3).map {
+                DownloadItem(
+                    sourceUrl = "https://example.test/concurrent-$it",
+                    videoId = "concurrent-$it",
+                    status = DownloadStatus.READY,
+                )
+            },
+            false,
+        )
+        val claimed = coroutineScope {
+            List(3) { async { queue.claimNext(false) } }.awaitAll()
+        }
+        assertEquals(3, claimed.filterNotNull().map { it.id }.distinct().size)
+    }
+
     @Test fun settingsRoundTripWithTypedValues() = runTest {
         val repository = SettingsRepository(database.dao())
         val value = AppSettings(
             theme = ThemePreference.LIGHT,
             language = LanguagePreference.RUSSIAN,
             retryCount = 3,
+            parallelDownloads = 3,
+            concurrentFragmentDownloads = 6,
             audioVolumeName = "1234-abcd",
             audioRelativePath = "Music/Tracks",
             videoRelativePath = "Movies/Clips",
@@ -94,6 +173,8 @@ class RoomRepositoryTest {
         assertEquals(ThemePreference.LIGHT, restored.theme)
         assertEquals(LanguagePreference.RUSSIAN, restored.language)
         assertEquals(3, restored.retryCount)
+        assertEquals(3, restored.parallelDownloads)
+        assertEquals(6, restored.concurrentFragmentDownloads)
         assertEquals("1234-abcd", restored.audioVolumeName)
         assertEquals("Music/Tracks", restored.audioRelativePath)
         assertEquals("Movies/Clips", restored.videoRelativePath)
@@ -106,5 +187,7 @@ class RoomRepositoryTest {
         assertEquals(2, AppDatabase.MIGRATION_1_2.endVersion)
         assertEquals(2, AppDatabase.MIGRATION_2_3.startVersion)
         assertEquals(3, AppDatabase.MIGRATION_2_3.endVersion)
+        assertEquals(3, AppDatabase.MIGRATION_3_4.startVersion)
+        assertEquals(4, AppDatabase.MIGRATION_3_4.endVersion)
     }
 }

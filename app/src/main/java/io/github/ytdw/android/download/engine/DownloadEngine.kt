@@ -6,7 +6,11 @@ import io.github.ytdw.android.domain.model.DownloadItem
 import io.github.ytdw.android.domain.model.DownloadProgress
 import kotlinx.coroutines.flow.Flow
 
-data class DownloadedFile(val mediaPath: String, val coverPath: String? = null)
+data class DownloadedFile(
+    val mediaPath: String,
+    val coverPath: String? = null,
+    val metadata: AnalyzedMedia? = null,
+)
 
 interface DownloadEngine {
     fun analyze(urls: List<String>): Flow<Result<AnalyzedMedia>>

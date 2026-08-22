@@ -14,10 +14,10 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.ytdw.android.domain.model.DownloadMode
 import io.github.ytdw.android.domain.model.VideoQuality
 import io.github.ytdw.android.ui.AppViewModel
@@ -26,13 +26,13 @@ import io.github.ytdw.android.ui.isRussian
 
 @Composable
 fun AnalyzeScreen(viewModel: AppViewModel, strings: UiStrings) {
-    val draft by viewModel.urlDraft.collectAsState()
-    val running by viewModel.analysisRunning.collectAsState()
-    val foundCount by viewModel.analysisFoundCount.collectAsState()
-    val errors by viewModel.analysisErrors.collectAsState()
-    val mode by viewModel.selectedMode.collectAsState()
-    val quality by viewModel.selectedQuality.collectAsState()
-    val settings by viewModel.settings.collectAsState()
+    val draft by viewModel.urlDraft.collectAsStateWithLifecycle()
+    val running by viewModel.analysisRunning.collectAsStateWithLifecycle()
+    val foundCount by viewModel.analysisFoundCount.collectAsStateWithLifecycle()
+    val errors by viewModel.analysisErrors.collectAsStateWithLifecycle()
+    val mode by viewModel.selectedMode.collectAsStateWithLifecycle()
+    val quality by viewModel.selectedQuality.collectAsStateWithLifecycle()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
     Column(
         Modifier.fillMaxSize().padding(16.dp).widthIn(max = 900.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),

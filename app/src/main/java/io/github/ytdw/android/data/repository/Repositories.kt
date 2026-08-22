@@ -34,6 +34,11 @@ class QueueRepository(private val database: AppDatabase) {
         stored
     }
 
+    suspend fun addAll(items: List<DownloadItem>, skipArchived: Boolean = true): List<DownloadItem> =
+        database.withTransaction {
+            items.map { add(it, skipArchived) }
+        }
+
     suspend fun get(id: String): DownloadItem? = dao.getQueueItem(id)?.toDomain()
 
     suspend fun save(item: DownloadItem): DownloadItem = database.withTransaction {
@@ -74,18 +79,34 @@ class QueueRepository(private val database: AppDatabase) {
     }
 
     suspend fun progress(id: String, progress: DownloadProgress) {
-        val current = get(id) ?: return
-        if (current.status == DownloadStatus.CANCELLED) return
-        save(current.copy(
-            status = DownloadStatus.DOWNLOADING,
-            progressPercentage = progress.percentage,
+        dao.updateProgress(
+            id = id,
+            percentage = progress.percentage,
             downloadedBytes = progress.downloadedBytes,
             totalBytes = progress.totalBytes,
             speed = progress.speedBytesPerSecond,
             etaSeconds = progress.etaSeconds,
-            currentPhase = progress.phase,
-        ))
+            phase = progress.phase,
+            now = System.currentTimeMillis(),
+        )
     }
+
+    suspend fun updateSelection(id: String, selected: Boolean): Boolean =
+        dao.updateSelection(id, selected, System.currentTimeMillis()) == 1
+
+    suspend fun updateMetadata(item: DownloadItem): Boolean = dao.updateMetadata(
+        id = item.id,
+        cleanedTitle = item.cleanedTitle,
+        artist = item.artist,
+        albumArtist = item.albumArtist,
+        album = item.album,
+        trackNumber = item.trackNumber,
+        titleManuallyEdited = item.titleManuallyEdited,
+        artistManuallyEdited = item.artistManuallyEdited,
+        albumManuallyEdited = item.albumManuallyEdited,
+        trackManuallyEdited = item.trackManuallyEdited,
+        now = System.currentTimeMillis(),
+    ) == 1
 
     suspend fun processing(id: String, phase: String): Boolean =
         dao.markProcessing(id, phase, System.currentTimeMillis()) == 1
@@ -214,6 +235,8 @@ private fun SettingsEntity.toDomain() = AppSettings(
     skipDownloadArchive = skipDownloadArchive, retryCount = retryCount,
     fragmentRetryCount = fragmentRetryCount, continuePartialDownloads = continuePartialDownloads,
     socketTimeoutSeconds = socketTimeoutSeconds,
+    parallelDownloads = parallelDownloads.coerceIn(1, 3),
+    concurrentFragmentDownloads = concurrentFragmentDownloads.coerceIn(1, 8),
     audioVolumeName = audioVolumeName, audioRelativePath = audioRelativePath,
     videoVolumeName = videoVolumeName, videoRelativePath = videoRelativePath,
 )
@@ -235,6 +258,8 @@ private fun AppSettings.toEntity(paused: Boolean) = SettingsEntity(
     fragmentRetryCount = fragmentRetryCount.coerceAtLeast(0),
     continuePartialDownloads = continuePartialDownloads,
     socketTimeoutSeconds = socketTimeoutSeconds.coerceAtLeast(1),
+    parallelDownloads = parallelDownloads.coerceIn(1, 3),
+    concurrentFragmentDownloads = concurrentFragmentDownloads.coerceIn(1, 8),
     audioVolumeName = audioVolumeName, audioRelativePath = audioRelativePath,
     videoVolumeName = videoVolumeName, videoRelativePath = videoRelativePath,
     queuePaused = paused,

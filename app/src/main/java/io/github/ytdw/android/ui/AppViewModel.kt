@@ -15,6 +15,7 @@ import io.github.ytdw.android.domain.service.MetadataCleaner
 import io.github.ytdw.android.download.worker.DownloadScheduler
 import java.net.URI
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -42,9 +43,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val selectedQuality = MutableStateFlow(VideoQuality.BEST)
     private var analysisJob: Job? = null
     private val thumbnailSlots = Semaphore(4)
+    private val itemUpdateJobs = mutableMapOf<String, Job>()
 
     init {
         viewModelScope.launch {
+            container.awaitReady()
             val restored = container.settingsRepository.load()
             if (restored.rememberLastTab) currentTab.value = restored.lastTab.coerceIn(0, 2)
         }
@@ -75,6 +78,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val analysisQuality = selectedQuality.value
         analysisJob = viewModelScope.launch {
             try {
+                val pendingItems = ArrayList<DownloadItem>(ANALYSIS_BATCH_SIZE)
+                suspend fun flushPendingItems() {
+                    if (pendingItems.isEmpty()) return
+                    val batch = pendingItems.toList()
+                    pendingItems.clear()
+                    val stored = container.queueRepository.addAll(batch, analysisSettings.skipDownloadArchive)
+                    analysisFoundCount.value += stored.size
+                    stored.forEach { item ->
+                        if (item.thumbnailUrl != null && item.cachedThumbnailPath == null) cachePreview(item)
+                    }
+                }
                 container.downloadEngine.analyze(urls.getOrThrow()).collect { result ->
                     result.fold(
                         onSuccess = { media ->
@@ -85,25 +99,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                                 channelName.takeIf { metadata.removeChannelFromTitle }.orEmpty(),
                                 metadata.removeLabels,
                             )
-                            val item = container.queueRepository.add(
-                                DownloadItem(
-                                    sourceUrl = media.sourceUrl, videoId = media.videoId,
-                                    playlistId = media.playlistId, playlistTitle = media.playlistTitle,
-                                    playlistIndex = media.playlistIndex, playlistCount = media.playlistCount,
-                                    originalTitle = media.title, cleanedTitle = cleaned,
-                                    channel = media.channel, uploader = media.uploader,
-                                    artist = channelName.takeIf { metadata.useChannelAsArtist }.orEmpty(),
-                                    albumArtist = channelName.takeIf { metadata.useChannelAsAlbumArtist }.orEmpty(),
-                                    album = media.playlistTitle.takeIf { metadata.usePlaylistTitleAsAlbum }.orEmpty(),
-                                    trackNumber = media.playlistIndex.takeIf { metadata.usePlaylistIndexAsTrack },
-                                    uploadDate = media.uploadDate, duration = media.duration,
-                                    thumbnailUrl = media.thumbnailUrl, downloadMode = analysisMode,
-                                    videoQuality = analysisQuality, status = DownloadStatus.READY,
-                                ),
-                                analysisSettings.skipDownloadArchive,
+                            pendingItems += DownloadItem(
+                                sourceUrl = media.sourceUrl, videoId = media.videoId,
+                                playlistId = media.playlistId, playlistTitle = media.playlistTitle,
+                                playlistIndex = media.playlistIndex, playlistCount = media.playlistCount,
+                                originalTitle = media.title, cleanedTitle = cleaned,
+                                channel = media.channel, uploader = media.uploader,
+                                artist = channelName.takeIf { metadata.useChannelAsArtist }.orEmpty(),
+                                albumArtist = channelName.takeIf { metadata.useChannelAsAlbumArtist }.orEmpty(),
+                                album = media.playlistTitle.takeIf { metadata.usePlaylistTitleAsAlbum }.orEmpty(),
+                                trackNumber = media.playlistIndex.takeIf { metadata.usePlaylistIndexAsTrack },
+                                uploadDate = media.uploadDate, duration = media.duration,
+                                thumbnailUrl = media.thumbnailUrl, downloadMode = analysisMode,
+                                videoQuality = analysisQuality, status = DownloadStatus.READY,
                             )
-                            analysisFoundCount.value++
-                            if (item.thumbnailUrl != null && item.cachedThumbnailPath == null) cachePreview(item)
+                            if (pendingItems.size >= ANALYSIS_BATCH_SIZE) flushPendingItems()
                         },
                         onFailure = { error ->
                             val mapped = ErrorMapper.map(error)
@@ -112,6 +122,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                         },
                     )
                 }
+                flushPendingItems()
                 if (analysisFoundCount.value > 0) selectTab(1)
             } finally {
                 analysisRunning.value = false
@@ -135,12 +146,26 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun updateItem(item: DownloadItem) = viewModelScope.launch { container.queueRepository.save(item) }
+    fun updateItem(item: DownloadItem) {
+        itemUpdateJobs.remove(item.id)?.cancel()
+        itemUpdateJobs[item.id] = viewModelScope.launch {
+            delay(250)
+            container.queueRepository.updateMetadata(item)
+            itemUpdateJobs.remove(item.id)
+        }
+    }
+
+    fun updateSelection(itemId: String, selected: Boolean) = viewModelScope.launch {
+        container.queueRepository.updateSelection(itemId, selected)
+    }
 
     fun startQueue() = viewModelScope.launch {
         queueError.value = null
-        container.settingsRepository.setQueuePaused(false)
-        runCatching { DownloadScheduler.start(getApplication()) }
+        runCatching {
+            container.awaitReady()
+            container.settingsRepository.setQueuePaused(false)
+            DownloadScheduler.start(getApplication())
+        }
             .onFailure {
                 container.settingsRepository.setQueuePaused(true)
                 val mapped = ErrorMapper.map(it)
@@ -159,8 +184,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun retryFailed() = viewModelScope.launch { container.queueRepository.retryFailed() }
     fun retry(item: DownloadItem) = viewModelScope.launch { container.queueRepository.retry(item.id) }
-    fun removeCompleted() = viewModelScope.launch { container.queueRepository.removeCompleted() }
-    fun clearAll() = viewModelScope.launch { container.queueRepository.clearAll() }
+    fun removeCompleted() = viewModelScope.launch {
+        val completedIds = queue.value.filter { it.status == DownloadStatus.COMPLETED }.map(DownloadItem::id)
+        container.queueRepository.removeCompleted()
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            completedIds.forEach { getApplication<Application>().cacheDir.resolve("covers/$it.jpg").delete() }
+        }
+    }
+
+    fun clearAll() = viewModelScope.launch {
+        container.queueRepository.clearAll()
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            getApplication<Application>().cacheDir.resolve("downloads").deleteRecursively()
+            getApplication<Application>().cacheDir.resolve("covers").deleteRecursively()
+        }
+    }
 
     fun saveSettings(value: AppSettings) = viewModelScope.launch { container.settingsRepository.save(value) }
 
@@ -178,6 +216,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     companion object {
+        private const val ANALYSIS_BATCH_SIZE = 32
+
         fun parseUrls(text: String): Result<List<String>> = runCatching {
             val urls = text.lineSequence().map(String::trim).filter(String::isNotEmpty).distinct().toList()
             require(urls.isNotEmpty()) { "Enter at least one HTTP URL" }

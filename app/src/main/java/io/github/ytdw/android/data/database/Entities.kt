@@ -102,6 +102,10 @@ data class SettingsEntity(
     val fragmentRetryCount: Int = 5,
     val continuePartialDownloads: Boolean = true,
     val socketTimeoutSeconds: Int = 30,
+    @ColumnInfo(defaultValue = "2")
+    val parallelDownloads: Int = 2,
+    @ColumnInfo(defaultValue = "4")
+    val concurrentFragmentDownloads: Int = 4,
     @ColumnInfo(defaultValue = "'external_primary'")
     val audioVolumeName: String = "external_primary",
     @ColumnInfo(defaultValue = "'Music/YT-DW'")
