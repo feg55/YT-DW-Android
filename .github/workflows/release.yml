@@ -84,9 +84,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          cp app/build/outputs/apk/release/app-arm64-v8a-release.apk "dist/YT-DW-${VERSION}-arm64-v8a.apk"
-          cp app/build/outputs/apk/release/app-armeabi-v7a-release.apk "dist/YT-DW-${VERSION}-armeabi-v7a.apk"
-          cp app/build/outputs/apk/release/app-x86_64-release.apk "dist/YT-DW-${VERSION}-x86_64.apk"
+          cp app/build/outputs/apk/release/app-arm64-v8a-release.apk "dist/YT-DW-${VERSION}-v8-lite.apk"
+          cp app/build/outputs/apk/release/app-armeabi-v7a-release.apk "dist/YT-DW-${VERSION}-v7-legacy.apk"
+          cp app/build/outputs/apk/release/app-x86_64-release.apk "dist/YT-DW-${VERSION}-x86-emulator.apk"
           cp app/build/outputs/apk/release/app-universal-release.apk "dist/YT-DW-${VERSION}-universal.apk"
           cp app/build/outputs/bundle/release/app-release.aab "dist/YT-DW-${VERSION}.aab"
           cp THIRD_PARTY_NOTICES.md dist/
