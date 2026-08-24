@@ -224,7 +224,7 @@ ksp {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2025.06.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.08.00")
     val lifecycleVersion = "2.10.0"
     implementation(composeBom)
 
