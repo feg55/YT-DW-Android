@@ -7,6 +7,7 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import java.net.HttpURLConnection
 import java.net.URI
 import java.security.MessageDigest
 import java.util.Properties
@@ -39,6 +40,11 @@ plugins {
 
 val ytDlpVersion = "2026.07.04"
 val ytDlpSha256 = "495be29ff4d9d4e9be7eabdfef225221e5d5282e77f2f505abc6dca80349f3fd"
+val appVersionCode = 4
+val appVersionName = "0.1.3"
+val releaseAbiSplits = providers.gradleProperty("releaseAbiSplits")
+    .map(String::toBoolean)
+    .getOrElse(false)
 val generatedYtDlpResources = layout.buildDirectory.dir("generated/ytDlpResources")
 val bundledYtDlp = generatedYtDlpResources.map { it.file("raw/ytdlp") }
 val generatedLegalAssets = layout.buildDirectory.dir("generated/legalAssets")
@@ -55,6 +61,11 @@ val releaseArtifactRequested = gradle.startParameter.taskNames.any {
 check(hasReleaseSigning || !releaseArtifactRequested) {
     "Release signing is not configured. Copy keystore.properties.example to " +
         "keystore.properties and provide a persistent release keystore."
+}
+if (hasReleaseSigning && releaseArtifactRequested) {
+    check(rootProject.file(releaseSigning.getProperty("storeFile")).isFile) {
+        "Release keystore does not exist at the path configured in keystore.properties."
+    }
 }
 
 fun sha256(file: File): String = MessageDigest.getInstance("SHA-256")
@@ -73,11 +84,33 @@ val downloadYtDlp = tasks.register("downloadYtDlp") {
         val output = bundledYtDlp.get().asFile
         output.parentFile.mkdirs()
         val temporary = File(output.parentFile, "${output.name}.part")
-        URI("https://github.com/yt-dlp/yt-dlp/releases/download/$ytDlpVersion/yt-dlp")
-            .toURL().openStream().use { input -> temporary.outputStream().use(input::copyTo) }
-        check(sha256(temporary) == ytDlpSha256) { "Downloaded yt-dlp checksum does not match $ytDlpSha256" }
-        temporary.copyTo(output, overwrite = true)
-        temporary.delete()
+        val source = URI("https://github.com/yt-dlp/yt-dlp/releases/download/$ytDlpVersion/yt-dlp").toURL()
+        var lastFailure: Throwable? = null
+        repeat(3) { attempt ->
+            temporary.delete()
+            try {
+                val connection = source.openConnection() as HttpURLConnection
+                connection.connectTimeout = 30_000
+                connection.readTimeout = 120_000
+                connection.instanceFollowRedirects = true
+                connection.setRequestProperty("User-Agent", "YT-DW-Gradle/$appVersionName")
+                connection.inputStream.use { input -> temporary.outputStream().use(input::copyTo) }
+                check(sha256(temporary) == ytDlpSha256) {
+                    "Downloaded yt-dlp checksum does not match $ytDlpSha256"
+                }
+                temporary.copyTo(output, overwrite = true)
+                temporary.delete()
+                return@doLast
+            } catch (error: Throwable) {
+                lastFailure = error
+                temporary.delete()
+                if (attempt < 2) {
+                    logger.warn("yt-dlp download attempt ${attempt + 1} failed; retrying", error)
+                    Thread.sleep(1_000L shl attempt)
+                }
+            }
+        }
+        throw GradleException("Could not download the pinned yt-dlp $ytDlpVersion", lastFailure)
     }
 }
 
@@ -98,8 +131,8 @@ android {
         applicationId = "io.github.ytdw.android"
         minSdk = 29
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.1.3"
+        versionCode = appVersionCode
+        versionName = appVersionName
         buildConfigField("String", "YT_DLP_VERSION", "\"$ytDlpVersion\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -123,6 +156,15 @@ android {
             isMinifyEnabled = false
             signingConfigs.findByName("release")?.let { signingConfig = it }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = releaseAbiSplits
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = true
         }
     }
 
@@ -156,6 +198,18 @@ java {
 }
 
 tasks.named("preBuild").configure { dependsOn(downloadYtDlp) }
+
+tasks.register("verifyReleaseVersion") {
+    group = "verification"
+    description = "Checks that -PreleaseTag matches the configured Android version."
+    doLast {
+        val releaseTag = providers.gradleProperty("releaseTag").orNull
+            ?: throw GradleException("Pass the release tag with -PreleaseTag=v$appVersionName")
+        check(releaseTag == "v$appVersionName") {
+            "Release tag $releaseTag does not match versionName $appVersionName"
+        }
+    }
+}
 
 androidComponents {
     onVariants(selector().all()) { variant ->

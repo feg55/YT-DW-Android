@@ -1,0 +1,110 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: release
+
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ""
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Make Gradle Wrapper executable
+        run: chmod +x gradlew
+
+      - name: Verify tag matches versionName
+        run: ./gradlew verifyReleaseVersion -PreleaseTag="$GITHUB_REF_NAME" --no-daemon --console=plain
+
+      - name: Restore signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64"
+          test -n "$STORE_PASSWORD"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASSWORD"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release-key.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/release-key.jks" "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" \
+            > keystore.properties
+
+      - name: Verify and build signed artifacts
+        run: |
+          ./gradlew clean check lintRelease assembleRelease bundleRelease \
+            -PreleaseAbiSplits=true --no-daemon --console=plain
+
+      - name: Verify APK signatures
+        run: |
+          set -euo pipefail
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
+          for apk in app/build/outputs/apk/release/*.apk; do
+            "$APKSIGNER" verify --verbose --print-certs "$apk"
+          done
+
+      - name: Prepare release assets
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-arm64-v8a-release.apk "dist/YT-DW-${VERSION}-arm64-v8a.apk"
+          cp app/build/outputs/apk/release/app-armeabi-v7a-release.apk "dist/YT-DW-${VERSION}-armeabi-v7a.apk"
+          cp app/build/outputs/apk/release/app-x86_64-release.apk "dist/YT-DW-${VERSION}-x86_64.apk"
+          cp app/build/outputs/apk/release/app-universal-release.apk "dist/YT-DW-${VERSION}-universal.apk"
+          cp app/build/outputs/bundle/release/app-release.aab "dist/YT-DW-${VERSION}.aab"
+          cp THIRD_PARTY_NOTICES.md dist/
+          curl --fail-with-body --location --retry 3 \
+            --output dist/youtubedl-android-0.18.1-source.tar.gz \
+            https://github.com/yausername/youtubedl-android/archive/refs/tags/0.18.1.tar.gz
+          curl --fail-with-body --location --retry 3 \
+            --output dist/yt-dlp-2026.07.04-source.tar.gz \
+            https://github.com/yt-dlp/yt-dlp/archive/refs/tags/2026.07.04.tar.gz
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+
+      - name: Create draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --draft \
+            --verify-tag \
+            --generate-notes \
+            --notes-file .github/release-notes.md \
+            --title "YT-DW ${GITHUB_REF_NAME}"
