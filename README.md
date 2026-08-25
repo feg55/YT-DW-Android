@@ -1,5 +1,12 @@
 # YT-DW for Android
 
+[![Android CI](https://github.com/feg55/YT-DW-Android/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/feg55/YT-DW-Android/actions/workflows/android.yml)
+[![Latest release](https://img.shields.io/github/v/release/feg55/YT-DW-Android?sort=semver)](https://github.com/feg55/YT-DW-Android/releases/latest)
+[![Android 10+](https://img.shields.io/badge/Android-10%2B%20%7C%20API%2029%2B-3DDC84?logo=android&logoColor=white)](#download-and-install)
+[![Kotlin 2.3.20](https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+[![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white)](https://developer.android.com/compose)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
+
 YT-DW is an open-source Android downloader for YouTube videos, audio, and playlists. It analyzes individual links or playlists and saves M4A audio or MP4 video using `yt-dlp` and FFmpeg.
 
 > [!TIP]
