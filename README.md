@@ -2,7 +2,10 @@
 
 YT-DW is an open-source Android downloader for YouTube videos, audio, and playlists. It analyzes individual links or playlists and saves M4A audio or MP4 video using `yt-dlp` and FFmpeg.
 
-**[Download the latest APK](https://github.com/feg55/YT-DW-Android/releases/latest)**
+> [!TIP]
+> **Looking for the desktop version?** Visit the main **[YT-DW repository →](https://github.com/feg55/YT-DW)** for the Windows desktop application, which can also be run from source on Linux and macOS.
+
+**[Download the latest Android APK →](https://github.com/feg55/YT-DW-Android/releases/latest)**
 
 Use YT-DW only for content you are authorized to download. This project is not affiliated with YouTube or any other supported service, does not override their rules, and does not grant rights to third-party content. The software is provided “as is,” without warranty, support, or author liability to the extent permitted by law.
 
