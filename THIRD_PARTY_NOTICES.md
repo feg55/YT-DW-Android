@@ -1,33 +1,33 @@
-# Сторонние компоненты
+# Third-Party Notices
 
-Этот файл является частью распространяемого приложения. Не удаляйте его из форков и бинарных релизов.
+This file is part of the distributed application. Do not remove it from forks or binary releases.
 
 ## youtubedl-android 0.18.1
 
-- Компоненты: `library` и `ffmpeg`.
-- Лицензия, заявленная издателем Maven-артефактов: GNU GPL v3.0.
-- Исходный код и инструкции сборки: https://github.com/yausername/youtubedl-android/tree/0.18.1
-- Архив исходников: https://github.com/yausername/youtubedl-android/archive/refs/tags/0.18.1.tar.gz
+- Components: `library` and `ffmpeg`.
+- License declared by the Maven artifact publisher: GNU GPL v3.0.
+- Source code and build instructions: https://github.com/yausername/youtubedl-android/tree/0.18.1
+- Source archive: https://github.com/yausername/youtubedl-android/archive/refs/tags/0.18.1.tar.gz
 
-Модуль `ffmpeg` содержит нативные бинарники FFmpeg и связанные библиотеки. Сам FFmpeg распространяется по LGPL-2.1-or-later либо GPL-2.0-or-later, если при сборке включены GPL-компоненты: https://ffmpeg.org/legal.html. Maven-модуль целиком объявлен издателем как GPL-3.0.
+The `ffmpeg` module contains native FFmpeg binaries and related libraries. FFmpeg itself is distributed under LGPL-2.1-or-later, or GPL-2.0-or-later when GPL components are enabled during the build: https://ffmpeg.org/legal.html. The publisher declares the complete Maven module as GPL-3.0.
 
-Опубликованный AAR не содержит отдельных файлов LICENSE/NOTICE и его инструкция сборки использует пакеты Termux без фиксации ревизии Termux. Поэтому сопровождающий бинарный релиз обязан сам сохранить доступ к соответствующим исходникам и данным сборки. Перед публикацией APK приложите к GitHub Release архив исходников тега `0.18.1` и не удаляйте ссылку на исходники, пока доступен APK.
+The published AAR does not include separate LICENSE/NOTICE files, and its build instructions use Termux packages without pinning a Termux revision. A distributor of a binary release must therefore preserve access to the corresponding source code and build information. Before publishing an APK, attach the source archive for tag `0.18.1` to the GitHub Release and keep the source link available for as long as the APK remains available.
 
 ## yt-dlp 2026.07.04
 
-- Включаемый файл: Unix zipimport executable `yt-dlp`.
-- Основной исходный код: The Unlicense.
-- В zipimport-сборку также входит код под лицензиями ISC и MIT.
-- Исходники релиза: https://github.com/yt-dlp/yt-dlp/tree/2026.07.04
-- Архив исходников: https://github.com/yt-dlp/yt-dlp/archive/refs/tags/2026.07.04.tar.gz
-- Лицензия: https://github.com/yt-dlp/yt-dlp/blob/2026.07.04/LICENSE
+- Included file: Unix zipimport executable `yt-dlp`.
+- Main source code license: The Unlicense.
+- The zipimport build also includes code under the ISC and MIT licenses.
+- Release source: https://github.com/yt-dlp/yt-dlp/tree/2026.07.04
+- Source archive: https://github.com/yt-dlp/yt-dlp/archive/refs/tags/2026.07.04.tar.gz
+- License: https://github.com/yt-dlp/yt-dlp/blob/2026.07.04/LICENSE
 
-Версия и SHA-256 загружаемого файла закреплены в `app/build.gradle.kts`.
+The downloaded file version and SHA-256 checksum are pinned in `app/build.gradle.kts`.
 
-## AndroidX, Kotlin и прочие зависимости
+## AndroidX, Kotlin, and other dependencies
 
-AndroidX, Jetpack Compose, Room, WorkManager, Kotlin и kotlinx.coroutines распространяются преимущественно по Apache License 2.0. Тестовые зависимости не входят в release APK. Точные координаты и версии находятся в `app/build.gradle.kts`; применяются лицензии, опубликованные правообладателями каждого артефакта.
+AndroidX, Jetpack Compose, Room, WorkManager, Kotlin, and kotlinx.coroutines are primarily distributed under the Apache License 2.0. Test dependencies are not included in the release APK. Exact artifact coordinates and versions are listed in `app/build.gradle.kts`; the licenses published by the copyright holders of each artifact apply.
 
-## Соответствующий исходный код
+## Corresponding source code
 
-Для каждого опубликованного APK соответствующим исходным кодом проекта считается Git-тег, из которого он собран, вместе с Gradle Wrapper, скриптами сборки и закреплёнными версиями зависимостей. Исходники включённых GPL/LGPL-бинарников должны оставаться доступными рядом с APK или по явно указанным стабильным ссылкам в соответствии с применимыми лицензиями.
+For every published APK, the project's corresponding source code is the Git tag from which it was built, together with the Gradle Wrapper, build scripts, and pinned dependency versions. Source code for included GPL/LGPL binaries must remain available next to the APK or through clearly identified stable links, as required by the applicable licenses.

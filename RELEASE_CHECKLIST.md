@@ -1,25 +1,31 @@
-# Чек-лист GitHub Release
+# GitHub Release Checklist
 
-## Однократная настройка
+## One-time setup
 
-1. Создайте постоянный ключ подписи и сохраните минимум две резервные копии вне репозитория:
+1. Create a permanent signing key and keep at least two backups outside the repository:
 
    ```bash
    keytool -genkeypair -v -keystore release-key.jks -alias release -keyalg RSA -keysize 4096 -validity 10000
    ```
 
-2. На GitHub откройте `Settings` → `Environments` → `New environment`, создайте окружение `release` и при желании включите обязательное ручное подтверждение.
-3. Добавьте в окружение `release` четыре секрета:
+2. On GitHub, open `Settings` → `Environments` → `New environment`, create an environment named `release`, and optionally require manual approval.
+3. Add four secrets to the `release` environment:
 
-   - `ANDROID_KEYSTORE_BASE64` — содержимое `release-key.jks` в Base64 одной строкой;
-   - `ANDROID_KEYSTORE_PASSWORD` — пароль хранилища;
-   - `ANDROID_KEY_ALIAS` — alias ключа;
-   - `ANDROID_KEY_PASSWORD` — пароль ключа.
+   - `ANDROID_KEYSTORE_BASE64` — the contents of `release-key.jks` encoded as a single-line Base64 string;
+   - `ANDROID_KEYSTORE_PASSWORD` — the keystore password;
+   - `ANDROID_KEY_ALIAS` — the signing key alias;
+   - `ANDROID_KEY_PASSWORD` — the signing key password.
 
-   Linux/macOS:
+   Linux:
 
    ```bash
    base64 -w 0 release-key.jks
+   ```
+
+   macOS:
+
+   ```bash
+   base64 < release-key.jks | tr -d '\n'
    ```
 
    PowerShell:
@@ -28,40 +34,40 @@
    [Convert]::ToBase64String([IO.File]::ReadAllBytes("release-key.jks"))
    ```
 
-Никогда не добавляйте ключ или его Base64-представление в Git, issue, логи либо файлы workflow.
+Never add the signing key or its Base64 representation to Git, issues, logs, or workflow files.
 
-## До сборки
+## Before building
 
-- [ ] Рабочее дерево чистое; в нём нет `local.properties`, keystore, `keystore.properties`, cookie, токенов и логов с персональными данными.
-- [ ] `versionCode` увеличен, `versionName` совпадает с будущим тегом.
-- [ ] Версия и SHA-256 `yt-dlp` в `app/build.gradle.kts` проверены.
-- [ ] `CHANGELOG.md` содержит раздел будущей версии и правильную дату.
-- [ ] Выполнено `./gradlew clean check lintDebug assembleDebug assembleDebugAndroidTest`.
-- [ ] Настроен постоянный release-keystore через локальный `keystore.properties`.
+- [ ] The working tree is clean and contains no `local.properties`, keystore, `keystore.properties`, cookies, tokens, or logs with personal data.
+- [ ] `versionCode` has been incremented and `versionName` matches the upcoming tag.
+- [ ] The pinned `yt-dlp` version and SHA-256 checksum in `app/build.gradle.kts` have been verified.
+- [ ] `CHANGELOG.md` contains the upcoming version and correct date.
+- [ ] `./gradlew clean check lintDebug assembleDebug assembleDebugAndroidTest` completes successfully.
+- [ ] The permanent release keystore is configured through the local `keystore.properties` file.
 
-## Релизная сборка
+## Release build
 
 ```bash
 ./gradlew assembleRelease bundleRelease -PreleaseAbiSplits=true
 apksigner verify --verbose --print-certs app/build/outputs/apk/release/app-universal-release.apk
 ```
 
-- [ ] Сертификат совпадает с предыдущим публичным релизом и не является debug-сертификатом.
-- [ ] APK установлен на чистое устройство.
-- [ ] Обновление поверх предыдущего публичного APK прошло без ошибки подписи.
-- [ ] Анализ ссылки и реальное скачивание аудио/видео проверены на устройстве.
+- [ ] The certificate matches the previous public release and is not a debug certificate.
+- [ ] The APK installs on a clean device.
+- [ ] The APK updates the previous public version without a signing error.
+- [ ] Link analysis and actual audio/video downloads have been tested on a device.
 
-## Исходники и лицензии
+## Source code and licenses
 
-- [ ] Создан подписанный или аннотированный тег, например `v0.1.3`, указывающий на точный исходный коммит APK.
-- [ ] В релизе доступны автоматические GitHub-архивы исходников этого тега.
-- [ ] Рядом с APK приложены архивы исходников `youtubedl-android 0.18.1` и `yt-dlp 2026.07.04` либо их проверенные зеркала.
-- [ ] В описании релиза есть ссылка на `THIRD_PARTY_NOTICES.md`.
-- [ ] APK содержит `assets/legal/LICENSE`, `NOTICE` и `THIRD_PARTY_NOTICES.md`.
+- [ ] A signed or annotated tag such as `v0.1.3` points to the exact source commit used to build the APK.
+- [ ] GitHub's automatically generated source archives for the tag are available in the release.
+- [ ] Source archives for `youtubedl-android 0.18.1` and `yt-dlp 2026.07.04`, or verified mirrors, are attached next to the APK files.
+- [ ] The release description links to `THIRD_PARTY_NOTICES.md`.
+- [ ] The APK contains `assets/legal/LICENSE`, `NOTICE`, and `THIRD_PARTY_NOTICES.md`.
 
-## Публикация
+## Publishing
 
-Рекомендуемый путь:
+Recommended procedure:
 
 ```bash
 git status
@@ -72,21 +78,21 @@ git tag -a v0.1.3 -m "YT-DW v0.1.3"
 git push origin v0.1.3
 ```
 
-Тег запускает `.github/workflows/release.yml`. Workflow:
+The tag starts `.github/workflows/release.yml`. The workflow:
 
-1. проверяет совпадение тега и `versionName`;
-2. выполняет тесты и lint;
-3. собирает подписанные APK `v8-lite`, `v7-legacy`, `x86-emulator`, `universal` и AAB;
-4. проверяет сертификаты APK;
-5. прикладывает исходники сторонних компонентов и `SHA256SUMS.txt`;
-6. создаёт черновик GitHub Release.
+1. verifies that the tag matches `versionName`;
+2. runs tests and lint;
+3. builds signed `v8-lite`, `v7-legacy`, `x86-emulator`, and `universal` APKs plus an AAB;
+4. verifies the APK certificates;
+5. attaches third-party source archives and `SHA256SUMS.txt`;
+6. creates a draft GitHub Release.
 
-После успешного workflow откройте черновик релиза, скачайте APK `v8-lite`, повторно проверьте SHA-256 и установите его на телефон. Только после smoke-теста нажмите **Publish release**.
+After the workflow succeeds, open the draft release, download the `v8-lite` APK, verify its SHA-256 again, and install it on a phone. Click **Publish release** only after this smoke test passes.
 
-Чтобы пересобрать уже существующий черновик, откройте `Actions` → `Android Release` → `Run workflow`, укажите его тег и запустите workflow. Старые ABI-имена будут удалены, а файлы и контрольные суммы — обновлены.
+To rebuild an existing draft, open `Actions` → `Android Release` → `Run workflow`, enter its tag, and start the workflow. Old ABI-based asset names are removed, and the files and checksums are replaced.
 
-- [ ] Для APK опубликован SHA-256.
-- [ ] В тексте релиза указано: «Программа предоставляется как есть, без гарантий. Пользователь отвечает за соблюдение правил сервисов, авторских прав и местного законодательства».
-- [ ] Keystore и его резервная копия сохранены вне GitHub.
+- [ ] A SHA-256 checksum is published for every APK.
+- [ ] The release text states: “The software is provided as is, without warranty. Users are responsible for complying with service rules, copyright law, and local laws.”
+- [ ] The keystore and its backup are stored outside GitHub.
 
-Нельзя обещать полное отсутствие юридических претензий: GPL ограничивает гарантии и ответственность только в пределах применимого законодательства и не отменяет авторские права на скачиваемые материалы, условия сайтов, патенты и требования конкретной страны.
+Do not promise complete protection from legal claims. The GPL limits warranties and liability only to the extent permitted by applicable law; it does not override copyright in downloaded material, website terms, patents, or country-specific requirements.

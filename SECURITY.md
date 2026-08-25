@@ -1,5 +1,5 @@
-# Безопасность
+# Security Policy
 
-Не публикуйте уязвимости, cookie, токены и ключи подписи в открытых issue. Передайте отчёт владельцу репозитория приватным способом через GitHub Security Advisories.
+Do not publish vulnerabilities, cookies, tokens, or signing keys in public issues. Report vulnerabilities privately to the repository owner through [GitHub Security Advisories](https://github.com/feg55/YT-DW-Android/security/advisories/new).
 
-Поддерживается только последняя опубликованная версия приложения.
+Only the latest published version of the application is supported.

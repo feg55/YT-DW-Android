@@ -1,37 +1,37 @@
-# История изменений
+# Changelog
 
-Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), версии следуют Semantic Versioning.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows Semantic Versioning.
 
 ## [Unreleased]
 
-### Изменено
+### Changed
 
-- имена релизных APK упрощены до `v8-lite`, `v7-legacy`, `x86-emulator` и `universal`.
+- Simplified release APK names to `v8-lite`, `v7-legacy`, `x86-emulator`, and `universal`.
 
 ## [0.1.3] — 2026-08-24
 
-### Добавлено
+### Added
 
-- параллельный анализ ссылок и плейлистов;
-- до трёх параллельных загрузок и настройка числа одновременных фрагментов;
-- выбор папок назначения через Android MediaStore;
-- сохранение и восстановление состояния очереди после перезапуска;
-- миграционные и инструментальные тесты базы данных.
+- Parallel analysis of links and playlists.
+- Up to three parallel downloads and a configurable number of concurrent fragments.
+- Destination folder selection through Android MediaStore.
+- Download queue state persistence and restoration after restart.
+- Database migration and instrumentation tests.
 
-### Изменено
+### Changed
 
-- ускорен анализ плейлистов через плоское извлечение метаданных;
-- сокращено подключение к YouTube: быстрый клиент без необязательных HLS/DASH-манифестов и полный резервный режим;
-- исключена предварительная подготовка временных медиассылок, вызывавшая повторные подключения и HTTP 403;
-- ограничена частота обновления прогресса, чтобы не перегружать Room и интерфейс;
-- инициализация yt-dlp и FFmpeg вынесена из горячего пути загрузки.
+- Accelerated playlist analysis through flat metadata extraction.
+- Reduced YouTube connection time with a fast client that skips optional HLS/DASH manifests and falls back to full extraction when needed.
+- Removed preliminary preparation of temporary media URLs that caused repeated connections and HTTP 403 errors.
+- Throttled progress updates to avoid overloading Room and the user interface.
+- Moved yt-dlp and FFmpeg initialization out of the download hot path.
 
-### Исправлено
+### Fixed
 
-- завершение приложения после анализа или отмены операции;
-- зависание очереди после отмены процесса yt-dlp;
-- отображение фактической стадии подключения и подготовки загрузчика;
-- обработка недоступных обложек без остановки основной загрузки.
+- Application termination after analysis or operation cancellation.
+- Download queue stalls after canceling a yt-dlp process.
+- Display of the actual source connection and downloader preparation stages.
+- Unavailable cover art no longer stops the main download.
 
 [Unreleased]: https://github.com/feg55/YT-DW-Android/compare/v0.1.3...HEAD
 [0.1.3]: https://github.com/feg55/YT-DW-Android/releases/tag/v0.1.3

@@ -1,11 +1,11 @@
-## Установка
+## Installation
 
-- Для большинства современных телефонов выбирайте APK `v8-lite` (64-битные ARM-устройства).
-- `v7-legacy` предназначен для старых 32-битных ARM-устройств.
-- `x86-emulator` нужен эмуляторам на ПК.
-- `universal` подходит для любой поддерживаемой архитектуры, но имеет больший размер.
-- AAB предназначен для загрузки в Google Play и не устанавливается напрямую.
+- Choose the `v8-lite` APK for most modern phones (64-bit ARM devices).
+- `v7-legacy` is intended for older 32-bit ARM devices.
+- `x86-emulator` is intended for Android emulators on a PC.
+- `universal` supports every available architecture but has a larger file size.
+- The AAB is intended for Google Play and cannot be installed directly.
 
-Проверьте файл `SHA256SUMS.txt` перед установкой. Обновления должны устанавливаться поверх предыдущей версии только при совпадении сертификата подписи.
+Verify the APK against `SHA256SUMS.txt` before installation. An update can be installed over the previous version only when both versions use the same signing certificate.
 
-Приложение предоставляется «как есть», без гарантий. Пользователь отвечает за соблюдение правил сервисов, авторских прав и местного законодательства. Сторонние компоненты и ссылки на соответствующие исходники перечислены в `THIRD_PARTY_NOTICES.md`.
+The application is provided “as is,” without warranty. Users are responsible for complying with service rules, copyright law, and local laws. Third-party components and corresponding source links are listed in `THIRD_PARTY_NOTICES.md`.

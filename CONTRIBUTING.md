@@ -1,11 +1,11 @@
-# Участие в разработке
+# Contributing
 
-1. Создайте отдельную ветку.
-2. Не добавляйте SDK, keystore, `local.properties` и сборочные файлы.
-3. Перед pull request выполните:
+1. Create a separate branch for your change.
+2. Do not commit an SDK, keystore, `local.properties`, or build output.
+3. Before opening a pull request, run:
 
 ```bash
 ./gradlew check assembleDebug
 ```
 
-В описании изменения укажите проверенный сценарий и версию Android. Для исправлений загрузчиков приложите обезличенный технический лог без cookie, токенов и персональных ссылок.
+In the pull request description, state the scenario you tested and the Android version used. For downloader fixes, attach a sanitized technical log without cookies, tokens, or personal URLs.

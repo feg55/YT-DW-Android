@@ -1,30 +1,37 @@
-# YT-DW Android
+# YT-DW: YouTube Video & Audio Downloader for Android
 
-Открытое Android-приложение для анализа ссылок и сохранения аудио/видео через `yt-dlp` и FFmpeg.
+YT-DW is an open-source Android downloader for YouTube videos, audio, and playlists. It analyzes individual links or playlists and saves M4A audio or MP4 video using `yt-dlp` and FFmpeg.
 
-Используйте приложение только для материалов, которые вы вправе скачивать. Проект не связан с YouTube и другими поддерживаемыми сервисами, не обходит их правила и не предоставляет права на чужой контент. Программа поставляется «как есть», без гарантий, поддержки и ответственности автора в пределах, допускаемых законом.
+**[Download the latest APK](https://github.com/feg55/YT-DW-Android/releases/latest)**
 
-## Возможности
+Use YT-DW only for content you are authorized to download. This project is not affiliated with YouTube or any other supported service, does not override their rules, and does not grant rights to third-party content. The software is provided “as is,” without warranty, support, or author liability to the extent permitted by law.
 
-- анализ одиночных ссылок и плейлистов;
-- предварительный просмотр и редактирование метаданных;
-- загрузка аудио M4A и видео MP4;
-- обложки, названия, исполнитель, альбом и номера треков;
-- сохранение через Android MediaStore без доступа ко всему хранилищу;
-- фоновая очередь, пауза, отмена и повтор ошибок;
-- русский и английский интерфейс.
+## Features
 
-Минимальная версия — Android 10 (API 29).
+- analyzes individual links and playlists;
+- previews and edits media metadata;
+- downloads M4A audio and MP4 video;
+- embeds cover art, title, artist, album, and track number metadata;
+- saves files through Android MediaStore without broad storage access;
+- provides a background download queue with pause, cancel, and retry actions;
+- includes English and Russian interfaces.
 
-## Установка
+Minimum supported version: Android 10 (API 29).
 
-Готовые сборки публикуются в разделе [Releases](https://github.com/feg55/YT-DW-Android/releases). Для большинства современных телефонов подходит APK `v8-lite`; `v7-legacy` нужен старым 32-битным устройствам, `x86-emulator` — эмуляторам. `universal` работает на всех поддерживаемых архитектурах, но заметно больше.
+## Download and install
 
-Перед установкой сверяйте SHA-256 APK с `SHA256SUMS.txt` из того же релиза. Android может предупреждать об установке приложения не из магазина — разрешайте её только для скачанного и проверенного APK.
+Ready-to-install builds are published on the [GitHub Releases page](https://github.com/feg55/YT-DW-Android/releases). Choose the APK that matches your device:
 
-## Сборка
+- `v8-lite` — most modern 64-bit ARM phones and tablets;
+- `v7-legacy` — older 32-bit ARM devices;
+- `x86-emulator` — Android emulators on a PC;
+- `universal` — all supported architectures, with a larger file size.
 
-Требуются JDK 17 и Android SDK с платформой API 36. Gradle Wrapper загружает закреплённую версию `yt-dlp` и проверяет её SHA-256.
+Before installing, compare the APK SHA-256 checksum with `SHA256SUMS.txt` from the same release. Android may warn about installing an app outside an app store; allow this only for an APK you downloaded from this repository and verified.
+
+## Build from source
+
+You need JDK 17 and the Android SDK with API 36 installed. The Gradle Wrapper downloads the pinned `yt-dlp` version and verifies its SHA-256 checksum.
 
 Windows:
 
@@ -39,50 +46,52 @@ chmod +x gradlew
 ./gradlew check assembleDebug
 ```
 
-Debug APK появится в `app/build/outputs/apk/debug/`.
+The debug APK is written to `app/build/outputs/apk/debug/`.
 
-Чтобы собрать отдельные release APK по архитектурам и универсальный APK:
+To build architecture-specific release APKs, a universal APK, and an AAB:
 
 ```bash
 ./gradlew assembleRelease bundleRelease -PreleaseAbiSplits=true
 ```
 
-## Подпись релиза
+## Release signing
 
-Публичный APK должен всегда подписываться одним постоянным ключом. Иначе Android сочтёт следующую сборку другим приложением и не установит её поверх предыдущей.
+Every public APK must be signed with the same permanent key. Otherwise, Android treats the next build as a different application and cannot install it over the previous version.
 
-1. Создайте отдельный release-keystore и сохраните резервную копию вне репозитория.
-2. Скопируйте `keystore.properties.example` в `keystore.properties`.
-3. Заполните путь, alias и пароли.
-4. Выполните `./gradlew assembleRelease`.
-5. Проверьте сертификат APK через `apksigner verify --verbose --print-certs`.
+1. Create a dedicated release keystore and keep a backup outside the repository.
+2. Copy `keystore.properties.example` to `keystore.properties`.
+3. Enter the keystore path, key alias, and passwords.
+4. Run `./gradlew assembleRelease`.
+5. Verify the APK certificate with `apksigner verify --verbose --print-certs`.
 
-Не добавляйте `keystore.properties`, keystore, cookie или токены в Git. Если на телефоне уже установлена сборка с другим сертификатом, её нужно удалить перед установкой нового APK; данные приложения при этом будут удалены.
+Never commit `keystore.properties`, a keystore, cookies, or tokens to Git. If a build signed with a different certificate is already installed, uninstall it before installing the new APK. Uninstalling removes the application's data.
 
-Полная процедура публикации описана в [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
+The complete publishing procedure is in [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
 
-При отправке тега вида `v0.1.3` workflow `.github/workflows/release.yml` проверяет версию, собирает и проверяет подписанные APK/AAB, формирует SHA-256 и создаёт **черновик** GitHub Release. Инструкции по настройке секретов находятся в релизном чек-листе.
+Pushing a tag such as `v0.1.3` starts `.github/workflows/release.yml`. The workflow checks the version, builds and verifies signed APK/AAB files, generates SHA-256 checksums, and creates a **draft** GitHub Release. Secret setup instructions are included in the release checklist.
 
-## Разрешения и данные
+## Permissions and privacy
 
-Приложение использует интернет и foreground service для активных загрузок. Разрешение на уведомления запрашивается только при запуске очереди на Android 13+. Доступ ко всему хранилищу не требуется. Собственного сервера, аккаунтов и сбора аналитики нет.
+YT-DW uses internet access and a foreground service for active downloads. Notification permission is requested only when starting the queue on Android 13 or newer. Broad storage access is not required. The app has no proprietary server, user accounts, or analytics collection.
 
-## Ограничения
+## Limitations and legal notice
 
-Сайты могут менять API, защиту и форматы без предупреждения. Доступность конкретного источника зависит от сети, региона и правил самого сервиса. Пользователь самостоятельно отвечает за соблюдение условий сервисов, авторских прав и законодательства своей страны.
+Websites may change their APIs, protections, and media formats without notice. Source availability depends on the network, region, and service rules. Users are responsible for complying with service terms, copyright law, and the laws of their country.
 
-## Проверки
+## Testing and contributing
+
+Run the project checks with:
 
 ```bash
 ./gradlew check assembleDebug assembleDebugAndroidTest
 ```
 
-История изменений ведётся в [CHANGELOG.md](CHANGELOG.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request. Release history is available in [CHANGELOG.md](CHANGELOG.md), and security reports are covered by [SECURITY.md](SECURITY.md).
 
-## Лицензия
+## License
 
-Код проекта распространяется по **GNU General Public License v3.0 only (GPL-3.0-only)** — см. [LICENSE](LICENSE).
+The project is licensed under the **GNU General Public License v3.0 only (GPL-3.0-only)**. See [LICENSE](LICENSE).
 
-Лицензия разрешает использовать, изучать, изменять, копировать и распространять программу, в том числе коммерчески. При распространении изменённой программы или APK необходимо сохранить GPL, уведомления об авторских правах и предоставить соответствующий исходный код. Это обязательное условие из-за включённой GPL-библиотеки `youtubedl-android`; заменить лицензию всего APK на MIT нельзя.
+The license permits using, studying, modifying, copying, and distributing the software, including commercially. When distributing a modified application or APK, you must preserve the GPL and copyright notices and provide the corresponding source code. This is required because the APK includes the GPL-licensed `youtubedl-android` library; the complete APK cannot be relicensed under MIT.
 
-Сторонние компоненты, их лицензии и ссылки на исходники перечислены в [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Отказ от гарантий и ограничение ответственности находятся в разделах 15–17 GPL-3.0.
+Third-party components, licenses, and source links are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The warranty disclaimer and limitation of liability are in sections 15–17 of GPL-3.0.
