@@ -1,4 +1,4 @@
-# YT-DW: YouTube Video & Audio Downloader for Android
+# YT-DW for Android
 
 YT-DW is an open-source Android downloader for YouTube videos, audio, and playlists. It analyzes individual links or playlists and saves M4A audio or MP4 video using `yt-dlp` and FFmpeg.
 
