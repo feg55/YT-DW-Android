@@ -1,5 +1,9 @@
 # YT-DW for Android
 
+YouTube playlist downloader
+
+![YT-DW for Android](docs/images/yt-dw-android.jpg)
+
 [![Android CI](https://github.com/feg55/YT-DW-Android/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/feg55/YT-DW-Android/actions/workflows/android.yml)
 [![Latest release](https://img.shields.io/github/v/release/feg55/YT-DW-Android?sort=semver)](https://github.com/feg55/YT-DW-Android/releases/latest)
 [![Android 10+](https://img.shields.io/badge/Android-10%2B%20%7C%20API%2029%2B-3DDC84?logo=android&logoColor=white)](#download-and-install)
